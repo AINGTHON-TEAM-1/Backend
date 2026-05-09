@@ -1,3 +1,4 @@
+from app.models.db.community import CommunityPost
 from app.models.db.giver import GiverExperience, GiverProfile
 from app.models.db.match import Match
 from app.models.db.post import TakerPost
@@ -11,4 +12,5 @@ __all__ = [
     "TakerPost",
     "Tag",
     "Match",
+    "CommunityPost",
 ]

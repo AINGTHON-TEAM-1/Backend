@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/gitue/OneDrive/Desktop/Backend/app/models/db/**)",
+      "Read(//c/Users/gitue/OneDrive/Desktop/Backend/app/models/schemas/**)",
+      "Read(//c/Users/gitue/OneDrive/Desktop/Backend/app/auth/**)",
+      "Read(//c/Users/gitue/OneDrive/Desktop/Backend/app/core/**)",
+      "Read(//c/Users/gitue/OneDrive/Desktop/Backend/app/db/**)"
+    ]
+  }
+}

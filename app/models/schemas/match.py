@@ -12,22 +12,31 @@ MatchStatus = Literal[
     "pending", "accepted", "rejected", "paid", "completed", "cancelled"
 ]
 MatchTargetType = Literal["giver", "taker_post"]
+RejectReason = Literal["time_mismatch", "field_mismatch", "other"]
+MyMatchKind = Literal["sent", "received", "matched"]
 
 
 class MatchCreate(BaseModel):
     """매칭 신청. target_type으로 양방향 흐름을 구분.
 
-    - target_type='giver': Taker가 Giver에게 직접 신청 (taker_post_id=NULL)
-    - target_type='taker_post': Giver가 Taker 구인글에 신청 (taker_post_id 필수)
+    - target_type='giver': Taker가 Giver에게 직접 신청 (target_id=Giver의 user_id, post_id 선택)
+    - target_type='taker_post': Giver가 Taker 구인글에 신청 (target_id=taker_posts.id)
     """
 
     target_type: MatchTargetType
     target_id: uuid.UUID = Field(
         ..., description="target_type에 따라 user.id(giver) 또는 taker_posts.id"
     )
+    post_id: uuid.UUID | None = Field(
+        default=None, description="Taker가 자신의 구인글과 신청을 연결할 때만"
+    )
     format: MatchFormat
-    message: str | None = None
+    message: str = Field(..., max_length=200)
     preferred_dates: list[Any] | dict[str, Any] | None = None
+
+
+class RejectRequest(BaseModel):
+    reason: RejectReason
 
 
 class MatchResponse(BaseModel):
