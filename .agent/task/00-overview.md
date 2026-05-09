@@ -15,12 +15,13 @@ Phase 0 (부트스트랩)
             │       └── Phase 3 (Giver/Taker 작성 API)
             │               ├── Phase 4 (양방향 탐색 API) ⭐
             │               ├── Phase 5 (AI 태그 추천)
-            │               └── Phase 6 (매칭 플로우)
-            │                       └── Phase 7 (통합 검증 & 데모)
+            │               ├── Phase 6 (매칭 플로우)
+            │               │       └── Phase 7 (통합 검증 & 데모)
+            │               └── Phase 8 (커뮤니티/라운지) ← PRD §12 주석: MVP에서 다룰 예정
             └── (시드 데이터 — Phase 1 완료 후 즉시 실행)
 ```
 
-Phase 4·5·6은 Phase 3 완료 후 **병렬 진행 가능**.
+Phase 4·5·6·8은 Phase 3 완료 후 **병렬 진행 가능**.
 
 ---
 
@@ -36,6 +37,7 @@ Phase 4·5·6은 Phase 3 완료 후 **병렬 진행 가능**.
 | 5 — AI 태그 추천 | 🔴 P0 | FR-GIVER-04, FR-TAKER-02 | Day 2 PM |
 | 6 — 매칭 플로우 | 🟠 P1 | FR-FLOW-01~04 | Day 2 PM |
 | 7 — 통합 검증 | 🟠 P1 | §11 KPI | Day 3 AM |
+| 8 — 커뮤니티/라운지 | 🟠 P1 | §12 (MVP 편입) | Day 3 AM |
 
 ---
 
@@ -71,14 +73,16 @@ Backend/
 │   │   ├── posts.py             # /posts/*
 │   │   ├── discover.py          # /discover/*
 │   │   ├── ai.py                # /ai/*
-│   │   └── matches.py           # /matches/*
+│   │   ├── matches.py           # /matches/*
+│   │   └── community.py         # /community/* (Phase 8)
 │   └── services/
 │       ├── pricing.py           # recalculate_giver_pricing()
 │       ├── giver_service.py
 │       ├── post_service.py
 │       ├── discover_service.py
 │       ├── ai_service.py
-│       └── match_service.py
+│       ├── match_service.py
+│       └── community_service.py # (Phase 8)
 ├── alembic/
 │   ├── env.py
 │   └── versions/
@@ -133,3 +137,4 @@ PRD §12 기준:
 - AI 기반 매칭 추천 / 임베딩
 - 푸시 알림 / 어드민 대시보드
 - Giver 등급제
+- ~~Giver/Taker 자체 커뮤니티~~ → **MVP 편입 (Phase 8)**

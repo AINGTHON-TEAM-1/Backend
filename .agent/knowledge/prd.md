@@ -1006,7 +1006,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 - 평점·후기 시스템 (UI는 mock)
 - Giver 등급 자동 산정
 - 분쟁 조정 시스템
-- Giver/Taker 자체 커뮤니티
+- Giver/Taker 자체 커뮤니티 <- MVP에서 다룰 예정
 - 푸시 알림
 - 어드민 대시보드
 - 다국어 지원
