@@ -1,74 +1,57 @@
-# Phase 2 — dev-login (목데이터 기반 인증)
+# Phase 2 — 유저 스위처 (auth 사실상 생략)
 
-> **목표**: 시드 유저 중 한 명으로 로그인하면 JWT가 발급되고, 이후 인증이 필요한 엔드포인트에서 `get_current_user`가 정상 동작한다.
+> **목표**: 시드 유저 10명 중 한 명의 ID를 `X-User-Id` 헤더로 보내면, 그 사용자로 행세하는 것처럼 동작한다. JWT/쿠키/카카오/비밀번호 모두 없음.
 >
-> ⚠️ **해커톤 결정**: 카카오 OAuth는 앱 등록·심사 시간 비용이 크므로 생략. 시드 유저 ID를 직접 지정하는 `POST /auth/dev-login`으로 대체한다.
+> ⚠️ **해커톤 결정 (변경 사항)**: 원래 dev-login(JWT 발급)을 계획했으나, 발표자 합의로 **유저 스위처** 방식으로 한 단계 더 단순화. 핵심 매칭 ownership(`taker_id/giver_id` 식별)은 유지하면서 인증 코드를 ~40 LOC 미만으로 축소.
+>
+> 프로덕션 전환 시 `get_current_user` 내부 구현만 OAuth로 교체.
 
 | 항목 | 내용 |
 |------|------|
 | PRD 매핑 | FR-AUTH-01, FR-AUTH-02 (간소화 구현) |
-| 해커톤 일정 | Day 1 PM (4~6h) |
+| 해커톤 일정 | Day 1 PM (1~2h, 원래 계획 대비 절반 이하) |
 | 선행 의존성 | Phase 1 완료 (users 테이블 + 시드 유저 존재) |
 | 후속 Phase | Phase 3 (Giver/Taker 작성 API) |
 
 ---
 
-## 작업 체크리스트
+## 동작 흐름
 
-### 1. JWT 유틸리티 (`app/auth/jwt.py`)
-
-- [ ] `create_access_token(user_id: str) -> str` — JWT 생성
-  - payload: `{"sub": user_id, "exp": now + 7days}`
-  - 알고리즘: HS256, 시크릿: `settings.JWT_SECRET`
-- [ ] `decode_access_token(token: str) -> str | None` — JWT 검증 → user_id 반환
-- [ ] `get_current_user(request: Request, db: AsyncSession) -> User | None` — 쿠키에서 JWT 추출 → User 조회 (인증 선택적)
-- [ ] `get_current_user_required(...)` — 인증 필수 버전, 미인증 시 HTTP 401
-
-### 2. 인증 라우터 (`app/routers/auth.py`)
-
-- [ ] `POST /api/v1/auth/dev-login`
-  - Request body: `{"user_id": "<시드 유저 UUID>"}`
-  - DB에서 해당 user_id 조회 → 없으면 HTTP 404
-  - JWT 생성 → httpOnly 쿠키 설정
-    ```python
-    response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True,
-        secure=False,   # 로컬/데모 환경
-        samesite="lax",
-        max_age=60 * 60 * 24 * 7  # 7일
-    )
-    ```
-  - Response: `UserResponse`
-
-- [ ] `POST /api/v1/auth/logout`
-  - 쿠키 삭제 (`response.delete_cookie("access_token")`)
-  - `{"message": "logged out"}`
-
-- [ ] `GET /api/v1/auth/me` 🔒
-  - 현재 로그인된 유저 정보 반환
-  - Response: `UserResponse`
-
-### 3. Pydantic 스키마 (`app/models/schemas/auth.py`)
-
-- [ ] `DevLoginRequest` — `user_id: UUID`
+```
+[프론트 로그인 화면]
+    └── GET /api/v1/auth/users  →  시드 유저 10명 카드 표시
+[유저 카드 클릭]
+    └── localStorage.setItem('userId', <UUID>)
+[이후 모든 API 호출]
+    └── 헤더에 X-User-Id: <UUID> 자동 첨부 (axios 인터셉터)
+```
 
 ---
 
-## 시드 유저 목록 (데모용)
+## 작업 체크리스트
 
-`scripts/seed.py`에서 생성되는 유저 UUID를 고정값으로 사용:
+### 1. 의존성 (`app/auth/dev.py`)
 
-| 역할 | nickname | UUID (고정) |
-|------|----------|------------|
-| Giver | 김운영 | `00000000-0000-0000-0000-000000000001` |
-| Giver | 이커뮤 | `00000000-0000-0000-0000-000000000002` |
-| Giver | 박리더 | `00000000-0000-0000-0000-000000000003` |
-| Giver | 최활성 | `00000000-0000-0000-0000-000000000004` |
-| Giver | 정인기 | `00000000-0000-0000-0000-000000000005` |
-| Taker | 한구인 | `00000000-0000-0000-0000-000000000006` |
-| Taker | 오탐색 | `00000000-0000-0000-0000-000000000007` |
+- [ ] `get_current_user(x_user_id: UUID = Header(...), db) -> User`
+  - 헤더 없으면 HTTP 401
+  - 유저 미존재면 HTTP 404
+- [ ] `get_current_user_optional(...)` — 헤더 없거나 미존재 시 `None` 반환 (공개 엔드포인트에서 "현재 유저가 봤는지" 추적용 — Phase 4에서 필요할 수도)
+
+### 2. 인증 라우터 (`app/routers/auth.py`)
+
+- [ ] `GET /api/v1/auth/users` — 시드 유저 리스트 (프론트 로그인 화면용)
+  - Response: `list[UserResponse]`
+  - 인증 불필요 (로그인 화면이므로)
+- [ ] `GET /api/v1/auth/me` — 현재 유저 (X-User-Id 기반)
+  - 인증 필수
+  - Response: `UserResponse`
+
+### 3. main.py 라우터 마운트
+
+```python
+from app.routers import auth
+app.include_router(auth.router, prefix="/api/v1")
+```
 
 ---
 
@@ -78,18 +61,12 @@
 Backend/
 └── app/
     ├── auth/
-    │   └── jwt.py
+    │   ├── __init__.py
+    │   └── dev.py              # get_current_user 의존성
     ├── routers/
-    │   └── auth.py
-    └── models/
-        └── schemas/
-            └── auth.py
-```
-
-`app/main.py`에 라우터 마운트 추가:
-```python
-from app.routers import auth
-app.include_router(auth.router, prefix="/api/v1")
+    │   ├── __init__.py
+    │   └── auth.py             # /auth/users, /auth/me
+    └── main.py                 # 라우터 마운트 추가
 ```
 
 ---
@@ -98,11 +75,10 @@ app.include_router(auth.router, prefix="/api/v1")
 
 | 검증 항목 | 방법 | 기대 결과 |
 |----------|------|----------|
-| dev-login | `POST /auth/dev-login {"user_id": "00000000-...01"}` | `access_token` httpOnly 쿠키 설정됨 |
-| 인증 필요 엔드포인트 | 쿠키 없이 `GET /auth/me` | HTTP 401 |
-| 인증 후 me 조회 | dev-login 후 `GET /auth/me` | 해당 유저 정보 반환 |
-| 로그아웃 | `POST /auth/logout` | 쿠키 삭제됨 |
-| 잘못된 user_id | 존재하지 않는 UUID로 dev-login | HTTP 404 |
+| 시드 유저 리스트 | `GET /api/v1/auth/users` (헤더 없이) | HTTP 200, 10명 |
+| 인증 필요 + 헤더 없음 | `GET /api/v1/auth/me` (헤더 없이) | HTTP 401 |
+| 인증 후 me 조회 | `GET /api/v1/auth/me -H 'X-User-Id: <시드 UUID>'` | HTTP 200, 해당 유저 |
+| 존재하지 않는 UUID | `GET /api/v1/auth/me -H 'X-User-Id: 00000000-...'` | HTTP 404 |
 
 ---
 
@@ -110,5 +86,26 @@ app.include_router(auth.router, prefix="/api/v1")
 
 | 리스크 | 대응 |
 |--------|------|
-| 시드 유저 미생성 상태에서 dev-login | Phase 1 시드 실행 선행 필수 (`python scripts/seed.py`) |
-| JWT_SECRET 미설정 | 서버 기동 시 `settings.JWT_SECRET` 검증, 없으면 기동 실패 |
+| 시드 유저 미생성 상태 | Phase 1 시드 실행 선행 (`PYTHONPATH=. python scripts/seed.py`) |
+| 외부 노출 시 누구나 임의 유저 행세 | 데모 모드임을 README 명시. 외부 도메인 배포 금지 |
+| 라우터 의존성 어긋남 | 모든 인증 필요 라우터는 동일하게 `Depends(get_current_user)` 사용 (FastAPI skill 컨벤션) |
+
+---
+
+## 프로덕션 전환 시 (참고)
+
+```python
+# 현재 (데모)
+async def get_current_user(x_user_id: UUID = Header(...), db) -> User:
+    user = await db.get(User, x_user_id)
+    ...
+
+# 프로덕션 (카카오 OAuth + JWT)
+async def get_current_user(request: Request, db) -> User:
+    token = request.cookies.get("access_token")
+    payload = jwt.decode(token, settings.jwt_secret, ...)
+    user = await db.get(User, payload["sub"])
+    ...
+```
+
+→ **라우터/서비스 코드는 한 줄도 안 바뀜**. 의존성 내부만 교체.
