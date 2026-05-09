@@ -16,5 +16,23 @@ services:
       timeout: 3s
       retries: 10
 
+  api:
+    build: .
+    container_name: giverun-api
+    env_file: .env
+    # 컨테이너 내부에서는 db 서비스명으로 접속 (.env의 localhost는 로컬 uvicorn용)
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/giverun
+    ports:
+      - "8000:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    # 기동 시 마이그레이션 자동 적용 후 서버 시작 (idempotent)
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8080"
+    restart: unless-stopped
+
 volumes:
   postgres_data:
