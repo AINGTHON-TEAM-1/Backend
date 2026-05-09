@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-Process *)",
+      "Bash(net stop *)",
+      "Bash(.venv/Scripts/alembic current *)",
+      "Bash(docker build *)",
+      "Bash(docker exec giverun-postgres *)"
+    ]
+  }
+}
